@@ -47,4 +47,80 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.patch("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedData = req.body;
+
+    const result = await startupsCollection.updateOne(
+      {
+        _id: new ObjectId(id),
+      },
+      {
+        $set: updatedData,
+      },
+    );
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await startupsCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+});
+
+router.patch("/approve/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await startupsCollection.updateOne(
+      {
+        _id: new ObjectId(id),
+      },
+      {
+        $set: {
+          status: "approved",
+        },
+      },
+    );
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+});
+
+router.get("/founder/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+
+    const startups = await startupsCollection
+      .find({
+        founder_email: email,
+      })
+      .toArray();
+
+    res.send(startups);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+});
+
 export default router;
