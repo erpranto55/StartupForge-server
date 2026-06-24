@@ -6,6 +6,7 @@ dotenv.config();
 
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
@@ -17,21 +18,18 @@ app.use(
 );
 
 import verifyToken from "./middlewares/verifyToken.js";
-app.get(
-  "/private",
-  verifyToken,
-  (req, res) => {
-    res.send({
-      success: true,
-      message: "Private Route Access Granted",
-      user: req.user,
-    });
-  }
-);
+app.get("/private", verifyToken, (req, res) => {
+  res.send({
+    success: true,
+    message: "Private Route Access Granted",
+    user: req.user,
+  });
+});
 
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
   res.send("StartupForge Server Running");

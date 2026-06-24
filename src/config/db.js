@@ -3,11 +3,9 @@ dotenv.config();
 
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
-
-console.log("Mongo URI Loaded:", !!uri);
-
-const client = new MongoClient(uri);
+const client = new MongoClient(
+  process.env.MONGODB_URI
+);
 
 export async function connectDB() {
   try {
@@ -17,5 +15,8 @@ export async function connectDB() {
     console.log(error);
   }
 }
+
+export const db =
+  client.db("startupforge");
 
 export default client;
