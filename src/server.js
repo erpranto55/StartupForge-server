@@ -7,6 +7,7 @@ dotenv.config();
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import startupRoutes from "./routes/startup.routes.js";
 
 const app = express();
 
@@ -30,6 +31,8 @@ app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/startups", startupRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("StartupForge Server Running");
