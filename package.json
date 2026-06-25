@@ -11,6 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@better-auth/cli": "^1.4.21",
+    "@better-auth/mongo-adapter": "^1.6.20",
     "better-auth": "^1.6.20",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

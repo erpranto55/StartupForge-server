@@ -18,6 +18,12 @@ const verifyToken = (req, res, next) => {
       });
     }
 
+    if (decoded.isBlocked) {
+      return res.status(403).send({
+        message: "Account is blocked",
+      });
+    }
+
     req.user = decoded;
 
     next();
