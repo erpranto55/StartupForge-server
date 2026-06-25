@@ -74,11 +74,17 @@ router.get("/founder/:email", async (req, res) => {
       })
       .toArray();
 
-    res.send(opportunities);
+    res.json({
+      success: true,
+      data: opportunities,
+    });
   } catch (error) {
     console.log(error);
 
-    res.status(500).send(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
