@@ -9,13 +9,25 @@ const startupsCollection = db.collection("startups");
 // Create Startup
 router.post("/", async (req, res) => {
   try {
-    const startup = {
-      ...req.body,
+    const startup = req.body;
+
+    // Check existing startup
+    const existingStartup = await startupsCollection.findOne({
+      founder_email: startup.founder_email,
+    });
+
+    if (existingStartup) {
+      return res.status(400).json({
+        success: false,
+        message: "You already created a startup",
+      });
+    }
+
+    const result = await startupsCollection.insertOne({
+      ...startup,
       status: "pending",
       createdAt: new Date(),
-    };
-
-    const result = await startupsCollection.insertOne(startup);
+    });
 
     res.status(201).json({
       success: true,
@@ -31,7 +43,6 @@ router.post("/", async (req, res) => {
     });
   }
 });
-
 // Get All Startups
 router.get("/", async (req, res) => {
   try {
