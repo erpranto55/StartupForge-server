@@ -16,8 +16,9 @@ router.post("/", async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).send({
-        message: "Already Applied",
+      return res.status(400).json({
+        success: false,
+        message: "You have already applied to this opportunity.",
       });
     }
 
@@ -27,10 +28,18 @@ router.post("/", async (req, res) => {
       applied_at: new Date(),
     });
 
-    res.send(result);
+    res.status(201).json({
+      success: true,
+      message: "Application submitted successfully",
+      insertedId: result.insertedId,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
@@ -45,11 +54,21 @@ router.get("/user/:email", async (req, res) => {
       })
       .toArray();
 
-    res.send(applications);
+    res.json({
+      success: true,
+      data: applications,
+    });
   } catch (error) {
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
+
+//Control Accept or Delete
 
 router.get("/founder/:email", async (req, res) => {
   try {
@@ -62,47 +81,88 @@ router.get("/founder/:email", async (req, res) => {
       })
       .toArray();
 
-    res.send(applications);
+    res.json({
+      success: true,
+      data: applications,
+    });
   } catch (error) {
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
-router.patch("/accept/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   try {
+    const { status } = req.body;
+
+    if (!["Accepted", "Rejected", "Pending"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status",
+      });
+    }
+
     const result = await applicationsCollection.updateOne(
       {
         _id: new ObjectId(req.params.id),
       },
       {
         $set: {
-          status: "Accepted",
+          status,
         },
       },
     );
 
-    res.send(result);
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Application ${status.toLowerCase()} successfully`,
+      modifiedCount: result.modifiedCount,
+    });
   } catch (error) {
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
-router.patch("/reject/:id", async (req, res) => {
+/**
+ * Get Application By Opportunity & Applicant
+ */
+router.get("/check", async (req, res) => {
   try {
-    const result = await applicationsCollection.updateOne(
-      {
-        _id: new ObjectId(req.params.id),
-      },
-      {
-        $set: {
-          status: "Rejected",
-        },
-      },
-    );
+    const { opportunity_id, applicant_email } = req.query;
 
-    res.send(result);
+    const application = await applicationsCollection.findOne({
+      opportunity_id,
+      applicant_email,
+    });
+
+    res.json({
+      success: true,
+      applied: !!application,
+      data: application,
+    });
   } catch (error) {
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
@@ -112,9 +172,25 @@ router.delete("/:id", async (req, res) => {
       _id: new ObjectId(req.params.id),
     });
 
-    res.send(result);
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Application deleted successfully",
+      deletedCount: result.deletedCount,
+    });
   } catch (error) {
-    res.status(500).send(error);
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
