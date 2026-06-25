@@ -20,7 +20,7 @@ router.post("/", async (req, res) => {
     });
 
     if (!founder) {
-      return res.status(404).send({
+      return res.status(404).json({
         success: false,
         message: "Founder not found",
       });
@@ -33,7 +33,7 @@ router.post("/", async (req, res) => {
 
     // Premium Check
     if (totalOpportunities >= 3 && !founder.isPremium) {
-      return res.status(403).send({
+      return res.status(403).json({
         success: false,
         message:
           "Premium Founder subscription required to post more than 3 opportunities.",
@@ -45,14 +45,15 @@ router.post("/", async (req, res) => {
       createdAt: new Date(),
     });
 
-    res.send({
+    res.status(201).json({
       success: true,
-      result,
+      message: "Opportunity created successfully",
+      insertedId: result.insertedId,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
-    res.status(500).send({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -83,13 +84,10 @@ router.get("/founder/:email", async (req, res) => {
 
 /**
  * Get All Opportunities
- * Search
- * Filter
- * Pagination
  */
 router.get("/", async (req, res) => {
   try {
-    const { search = "", workType, page = 1, limit = 6 } = req.query;
+    const { search = "", page = 1, limit = 6, workType, industry } = req.query;
 
     const query = {};
 
@@ -111,7 +109,15 @@ router.get("/", async (req, res) => {
     }
 
     if (workType) {
-      query.work_type = workType;
+      query.work_type = {
+        $in: workType.split(","),
+      };
+    }
+
+    if (industry) {
+      query.industry = {
+        $in: industry.split(","),
+      };
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -127,16 +133,20 @@ router.get("/", async (req, res) => {
 
     const total = await opportunitiesCollection.countDocuments(query);
 
-    res.send({
-      opportunities,
+    res.json({
+      success: true,
+      data: opportunities,
       total,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
-    res.status(500).send(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
@@ -149,11 +159,24 @@ router.get("/:id", async (req, res) => {
       _id: new ObjectId(req.params.id),
     });
 
-    res.send(opportunity);
-  } catch (error) {
-    console.log(error);
+    if (!opportunity) {
+      return res.status(404).json({
+        success: false,
+        message: "Opportunity not found",
+      });
+    }
 
-    res.status(500).send(error);
+    res.json({
+      success: true,
+      data: opportunity,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
@@ -162,20 +185,42 @@ router.get("/:id", async (req, res) => {
  */
 router.patch("/:id", async (req, res) => {
   try {
+    const updatedData = {
+      ...req.body,
+    };
+
+    delete updatedData._id;
+    delete updatedData.createdAt;
+    delete updatedData.founder_email;
+
     const result = await opportunitiesCollection.updateOne(
       {
         _id: new ObjectId(req.params.id),
       },
       {
-        $set: req.body,
+        $set: updatedData,
       },
     );
 
-    res.send(result);
-  } catch (error) {
-    console.log(error);
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Opportunity not found",
+      });
+    }
 
-    res.status(500).send(error);
+    res.json({
+      success: true,
+      message: "Opportunity updated successfully",
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
@@ -188,11 +233,25 @@ router.delete("/:id", async (req, res) => {
       _id: new ObjectId(req.params.id),
     });
 
-    res.send(result);
-  } catch (error) {
-    console.log(error);
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Opportunity not found",
+      });
+    }
 
-    res.status(500).send(error);
+    res.json({
+      success: true,
+      message: "Opportunity deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
