@@ -10,6 +10,7 @@ import userRoutes from "./routes/user.routes.js";
 import startupRoutes from "./routes/startup.routes.js";
 import opportunityRoutes from "./routes/opportunity.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 const app = express();
 
@@ -36,7 +37,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/startups", startupRoutes);
 app.use("/api/opportunities", opportunityRoutes);
 app.use("/api/applications", applicationRoutes);
-
+app.use("/api/payments", paymentRoutes);
+ 
 app.get("/", (req, res) => {
   res.send("StartupForge Server Running");
 });

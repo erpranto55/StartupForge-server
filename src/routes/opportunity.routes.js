@@ -5,22 +5,88 @@ import { db } from "../config/db.js";
 const router = express.Router();
 
 const opportunitiesCollection = db.collection("opportunities");
+const usersCollection = db.collection("users");
 
+/**
+ * Create Opportunity
+ */
 router.post("/", async (req, res) => {
   try {
     const opportunity = req.body;
+
+    // Check Founder
+    const founder = await usersCollection.findOne({
+      email: opportunity.founder_email,
+    });
+
+    if (!founder) {
+      return res.status(404).send({
+        success: false,
+        message: "Founder not found",
+      });
+    }
+
+    // Count Existing Opportunities
+    const totalOpportunities = await opportunitiesCollection.countDocuments({
+      founder_email: opportunity.founder_email,
+    });
+
+    // Premium Check
+    if (totalOpportunities >= 3 && !founder.isPremium) {
+      return res.status(403).send({
+        success: false,
+        message:
+          "Premium Founder subscription required to post more than 3 opportunities.",
+      });
+    }
 
     const result = await opportunitiesCollection.insertOne({
       ...opportunity,
       createdAt: new Date(),
     });
 
-    res.send(result);
+    res.send({
+      success: true,
+      result,
+    });
   } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Get Founder Opportunities
+ */
+router.get("/founder/:email", async (req, res) => {
+  try {
+    const opportunities = await opportunitiesCollection
+      .find({
+        founder_email: req.params.email,
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .toArray();
+
+    res.send(opportunities);
+  } catch (error) {
+    console.log(error);
+
     res.status(500).send(error);
   }
 });
 
+/**
+ * Get All Opportunities
+ * Search
+ * Filter
+ * Pagination
+ */
 router.get("/", async (req, res) => {
   try {
     const { search = "", workType, page = 1, limit = 6 } = req.query;
@@ -52,9 +118,11 @@ router.get("/", async (req, res) => {
 
     const opportunities = await opportunitiesCollection
       .find(query)
+      .sort({
+        createdAt: -1,
+      })
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
       .toArray();
 
     const total = await opportunitiesCollection.countDocuments(query);
@@ -63,14 +131,18 @@ router.get("/", async (req, res) => {
       opportunities,
       total,
       currentPage: parseInt(page),
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (error) {
     console.log(error);
+
     res.status(500).send(error);
   }
 });
 
+/**
+ * Get Single Opportunity
+ */
 router.get("/:id", async (req, res) => {
   try {
     const opportunity = await opportunitiesCollection.findOne({
@@ -79,24 +151,15 @@ router.get("/:id", async (req, res) => {
 
     res.send(opportunity);
   } catch (error) {
+    console.log(error);
+
     res.status(500).send(error);
   }
 });
 
-router.get("/founder/:email", async (req, res) => {
-  try {
-    const opportunities = await opportunitiesCollection
-      .find({
-        founder_email: req.params.email,
-      })
-      .toArray();
-
-    res.send(opportunities);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
+/**
+ * Update Opportunity
+ */
 router.patch("/:id", async (req, res) => {
   try {
     const result = await opportunitiesCollection.updateOne(
@@ -110,10 +173,15 @@ router.patch("/:id", async (req, res) => {
 
     res.send(result);
   } catch (error) {
+    console.log(error);
+
     res.status(500).send(error);
   }
 });
 
+/**
+ * Delete Opportunity
+ */
 router.delete("/:id", async (req, res) => {
   try {
     const result = await opportunitiesCollection.deleteOne({
@@ -122,6 +190,8 @@ router.delete("/:id", async (req, res) => {
 
     res.send(result);
   } catch (error) {
+    console.log(error);
+
     res.status(500).send(error);
   }
 });
