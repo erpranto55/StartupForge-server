@@ -156,6 +156,43 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/dashboard/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const applicationsCollection = db.collection("applications");
+
+    const totalOpportunities = await opportunitiesCollection.countDocuments({
+      founder_email: email,
+    });
+
+    const totalApplications = await applicationsCollection.countDocuments({
+      founder_email: email,
+    });
+
+    const acceptedMembers = await applicationsCollection.countDocuments({
+      founder_email: email,
+      status: "Accepted",
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalOpportunities,
+        totalApplications,
+        acceptedMembers,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
 /**
  * Get Single Opportunity
  */
