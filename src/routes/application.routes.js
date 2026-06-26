@@ -5,6 +5,7 @@ import { db } from "../config/db.js";
 const router = express.Router();
 
 const applicationsCollection = db.collection("applications");
+const startupsCollection = db.collection("startups");
 
 router.post("/", async (req, res) => {
   try {
@@ -99,6 +100,17 @@ router.patch("/:id", async (req, res) => {
   try {
     const { status } = req.body;
 
+    const application = await applicationsCollection.findOne({
+      _id: new ObjectId(req.params.id),
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
     if (!["Accepted", "Rejected", "Pending"].includes(status)) {
       return res.status(400).json({
         success: false,
@@ -106,9 +118,9 @@ router.patch("/:id", async (req, res) => {
       });
     }
 
-    const result = await applicationsCollection.updateOne(
+    await applicationsCollection.updateOne(
       {
-        _id: new ObjectId(req.params.id),
+        _id: application._id,
       },
       {
         $set: {
@@ -116,6 +128,29 @@ router.patch("/:id", async (req, res) => {
         },
       },
     );
+
+    if (status === "Accepted") {
+      await startupsCollection.updateOne(
+        {
+          founder_email: application.founder_email,
+        },
+        {
+          $addToSet: {
+            team_members: {
+              user_email: application.applicant_email,
+
+              name: application.applicant_name,
+
+              portfolio: application.portfolio,
+
+              role: application.role_title,
+
+              joined_at: new Date(),
+            },
+          },
+        },
+      );
+    }
 
     if (result.matchedCount === 0) {
       return res.status(404).json({
