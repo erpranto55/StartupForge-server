@@ -5,7 +5,8 @@ const usersCollection = db.collection("users");
 
 const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
-
+  console.log("Cookies:", req.cookies);
+  console.log("Token:", token);
   if (!token) {
     return res.status(401).send({
       message: "Unauthorized Access",

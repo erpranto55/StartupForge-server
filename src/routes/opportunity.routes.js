@@ -65,30 +65,35 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
 /**
  * Get Founder Opportunities
  */
-router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const opportunities = await opportunitiesCollection
-      .find({
-        founder_email: req.params.email,
-      })
-      .sort({
-        createdAt: -1,
-      })
-      .toArray();
+router.get(
+  "/founder/:email",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      const opportunities = await opportunitiesCollection
+        .find({
+          founder_email: req.params.email,
+        })
+        .sort({
+          createdAt: -1,
+        })
+        .toArray();
 
-    res.json({
-      success: true,
-      data: opportunities,
-    });
-  } catch (error) {
-    console.log(error);
+      res.json({
+        success: true,
+        data: opportunities,
+      });
+    } catch (error) {
+      console.log(error);
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 /**
  * Get All Opportunities
@@ -158,42 +163,47 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/dashboard/:email", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const { email } = req.params;
+router.get(
+  "/dashboard/:email",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      const email = req.user.email;
 
-    const applicationsCollection = db.collection("applications");
+      const applicationsCollection = db.collection("applications");
 
-    const totalOpportunities = await opportunitiesCollection.countDocuments({
-      founder_email: email,
-    });
+      const totalOpportunities = await opportunitiesCollection.countDocuments({
+        founder_email: email,
+      });
 
-    const totalApplications = await applicationsCollection.countDocuments({
-      founder_email: email,
-    });
+      const totalApplications = await applicationsCollection.countDocuments({
+        founder_email: email,
+      });
 
-    const acceptedMembers = await applicationsCollection.countDocuments({
-      founder_email: email,
-      status: "Accepted",
-    });
+      const acceptedMembers = await applicationsCollection.countDocuments({
+        founder_email: email,
+        status: "Accepted",
+      });
 
-    res.json({
-      success: true,
-      data: {
-        totalOpportunities,
-        totalApplications,
-        acceptedMembers,
-      },
-    });
-  } catch (error) {
-    console.log(error);
+      res.json({
+        success: true,
+        data: {
+          totalOpportunities,
+          totalApplications,
+          acceptedMembers,
+        },
+      });
+    } catch (error) {
+      console.log(error);
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 /**
  * Get Single Opportunity
@@ -272,33 +282,37 @@ router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
 /**
  * Delete Opportunity
  */
-router.delete("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
-  try {
-    const result = await opportunitiesCollection.deleteOne({
-      _id: new ObjectId(req.params.id),
-    });
+router.delete(
+  "/:id",
+  verifyToken,
+  verifyRole("founder", "admin"),
+  async (req, res) => {
+    try {
+      const result = await opportunitiesCollection.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Opportunity not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Opportunity deleted successfully",
+        deletedCount: result.deletedCount,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
         success: false,
-        message: "Opportunity not found",
+        message: error.message,
       });
     }
-
-    res.json({
-      success: true,
-      message: "Opportunity deleted successfully",
-      deletedCount: result.deletedCount,
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+  },
+);
 
 export default router;
-
