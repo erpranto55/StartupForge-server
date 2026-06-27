@@ -1,13 +1,15 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { db } from "../config/db.js";
+import verifyToken from "../middlewares/verifyToken.js";
+import verifyRole from "../middlewares/verifyRole.js";
 
 const router = express.Router();
 
 const startupsCollection = db.collection("startups");
 
 // Create Startup
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const startup = req.body;
 
@@ -66,7 +68,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get Startups By Founder Email
-router.get("/founder/:email", async (req, res) => {
+router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const { email } = req.params;
 
@@ -92,7 +94,7 @@ router.get("/founder/:email", async (req, res) => {
 });
 
 // Approve Startup
-router.patch("/approve/:id", async (req, res) => {
+router.patch("/approve/:id", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -125,7 +127,7 @@ router.patch("/approve/:id", async (req, res) => {
 /**
  * Get Startup Team
  */
-router.get("/team/:email", async (req, res) => {
+router.get("/team/:email", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const startup = await startupsCollection.findOne({
       founder_email: req.params.email,
@@ -183,7 +185,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update Startup
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -225,7 +227,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 // Delete Startup
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -256,3 +258,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+

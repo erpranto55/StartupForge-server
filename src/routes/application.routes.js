@@ -1,13 +1,15 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { db } from "../config/db.js";
+import verifyToken from "../middlewares/verifyToken.js";
+import verifyRole from "../middlewares/verifyRole.js";
 
 const router = express.Router();
 
 const applicationsCollection = db.collection("applications");
 const startupsCollection = db.collection("startups");
 
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
   try {
     const application = req.body;
 
@@ -44,7 +46,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/user/:email", async (req, res) => {
+router.get("/user/:email", verifyToken, verifyRole("collaborator"), async (req, res) => {
   try {
     const applications = await applicationsCollection
       .find({
@@ -71,7 +73,7 @@ router.get("/user/:email", async (req, res) => {
 
 //Control Accept or Delete
 
-router.get("/founder/:email", async (req, res) => {
+router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const applications = await applicationsCollection
       .find({
@@ -96,7 +98,7 @@ router.get("/founder/:email", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -130,7 +132,9 @@ router.patch("/:id", async (req, res) => {
     );
 
     if (status === "Accepted") {
-      await startupsCollection.updateOne(
+      console.log("Application:", application);
+
+      const startupResult = await startupsCollection.updateOne(
         {
           founder_email: application.founder_email,
         },
@@ -138,18 +142,16 @@ router.patch("/:id", async (req, res) => {
           $addToSet: {
             team_members: {
               user_email: application.applicant_email,
-
               name: application.applicant_name,
-
               portfolio: application.portfolio,
-
               role: application.role_title,
-
               joined_at: new Date(),
             },
           },
         },
       );
+
+      console.log("Startup Update Result:", startupResult);
     }
 
     if (result.matchedCount === 0) {
@@ -177,7 +179,7 @@ router.patch("/:id", async (req, res) => {
 /**
  * Get Application By Opportunity & Applicant
  */
-router.get("/check", async (req, res) => {
+router.get("/check", verifyToken, verifyRole("collaborator"), async (req, res) => {
   try {
     const { opportunity_id, applicant_email } = req.query;
 
@@ -201,7 +203,7 @@ router.get("/check", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, verifyRole("founder", "collaborator", "admin"), async (req, res) => {
   try {
     const result = await applicationsCollection.deleteOne({
       _id: new ObjectId(req.params.id),
@@ -230,3 +232,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+

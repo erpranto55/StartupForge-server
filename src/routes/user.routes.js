@@ -1,6 +1,8 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { ObjectId } from "mongodb";
+import verifyToken from "../middlewares/verifyToken.js";
+import verifyRole from "../middlewares/verifyRole.js";
 
 const router = express.Router();
 
@@ -34,7 +36,7 @@ router.post("/", async (req, res) => {
 });
 
 // Get All Users
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const users = await usersCollection.find().toArray();
 
@@ -63,7 +65,7 @@ router.get("/:email", async (req, res) => {
   }
 });
 
-router.patch("/block/:id", async (req, res) => {
+router.patch("/block/:id", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -84,7 +86,7 @@ router.patch("/block/:id", async (req, res) => {
   }
 });
 
-router.patch("/unblock/:id", async (req, res) => {
+router.patch("/unblock/:id", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -105,7 +107,7 @@ router.patch("/unblock/:id", async (req, res) => {
   }
 });
 
-router.patch("/role/:id", async (req, res) => {
+router.patch("/role/:id", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -129,3 +131,4 @@ router.patch("/role/:id", async (req, res) => {
 });
 
 export default router;
+

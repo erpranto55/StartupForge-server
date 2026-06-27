@@ -1,6 +1,8 @@
 import express from "express";
 import Stripe from "stripe";
 import { db } from "../config/db.js";
+import verifyToken from "../middlewares/verifyToken.js";
+import verifyRole from "../middlewares/verifyRole.js";
 
 const router = express.Router();
 
@@ -12,7 +14,7 @@ const usersCollection = db.collection("users");
 /**
  * Create Stripe Checkout Session
  */
-router.post("/create-checkout-session", async (req, res) => {
+router.post("/create-checkout-session", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -63,7 +65,7 @@ router.post("/create-checkout-session", async (req, res) => {
 /**
  * Save Payment
  */
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const payment = req.body;
 
@@ -102,7 +104,7 @@ router.post("/", async (req, res) => {
 /**
  * Get All Payments
  */
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const payments = await paymentsCollection
       .find()

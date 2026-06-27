@@ -1,6 +1,8 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { db } from "../config/db.js";
+import verifyToken from "../middlewares/verifyToken.js";
+import verifyRole from "../middlewares/verifyRole.js";
 
 const router = express.Router();
 
@@ -10,7 +12,7 @@ const usersCollection = db.collection("users");
 /**
  * Create Opportunity
  */
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const opportunity = req.body;
 
@@ -63,7 +65,7 @@ router.post("/", async (req, res) => {
 /**
  * Get Founder Opportunities
  */
-router.get("/founder/:email", async (req, res) => {
+router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const opportunities = await opportunitiesCollection
       .find({
@@ -156,7 +158,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/dashboard/:email", async (req, res) => {
+router.get("/dashboard/:email", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const { email } = req.params;
 
@@ -226,7 +228,7 @@ router.get("/:id", async (req, res) => {
 /**
  * Update Opportunity
  */
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const updatedData = {
       ...req.body,
@@ -270,7 +272,7 @@ router.patch("/:id", async (req, res) => {
 /**
  * Delete Opportunity
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
   try {
     const result = await opportunitiesCollection.deleteOne({
       _id: new ObjectId(req.params.id),
@@ -299,3 +301,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+
