@@ -65,70 +65,136 @@ router.get("/:email", async (req, res) => {
   }
 });
 
-router.patch("/block/:id", verifyToken, verifyRole("admin"), async (req, res) => {
+router.patch(
+  "/block/:id",
+  verifyToken,
+  verifyRole("admin"),
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const result = await usersCollection.updateOne(
+        {
+          _id: new ObjectId(id),
+        },
+        {
+          $set: {
+            isBlocked: true,
+          },
+        },
+      );
+
+      res.send(result);
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  },
+);
+
+router.patch(
+  "/unblock/:id",
+  verifyToken,
+  verifyRole("admin"),
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const result = await usersCollection.updateOne(
+        {
+          _id: new ObjectId(id),
+        },
+        {
+          $set: {
+            isBlocked: false,
+          },
+        },
+      );
+
+      res.send(result);
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  },
+);
+
+router.patch(
+  "/role/:id",
+  verifyToken,
+  verifyRole("admin"),
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const { role } = req.body;
+
+      const result = await usersCollection.updateOne(
+        {
+          _id: new ObjectId(id),
+        },
+        {
+          $set: {
+            role,
+          },
+        },
+      );
+
+      res.send(result);
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  },
+);
+
+/**
+ * Update Own Profile
+ */
+
+router.patch("/:email", verifyToken, async (req, res) => {
   try {
-    const id = req.params.id;
+    const { email } = req.params;
+
+    // Users can only update their own profile
+    if (req.user.email !== email) {
+      return res.status(403).send({
+        success: false,
+        message: "Forbidden",
+      });
+    }
+
+    const { name, image, bio, skills, github, portfolio } = req.body;
+
+    const updateDoc = {
+      $set: {
+        name,
+        image,
+        bio,
+        skills,
+        github,
+        portfolio,
+        updatedAt: new Date(),
+      },
+    };
 
     const result = await usersCollection.updateOne(
       {
-        _id: new ObjectId(id),
+        email,
       },
-      {
-        $set: {
-          isBlocked: true,
-        },
-      },
+      updateDoc,
     );
 
-    res.send(result);
+    res.send({
+      success: true,
+      message: "Profile updated successfully",
+      modifiedCount: result.modifiedCount,
+    });
   } catch (error) {
-    res.status(500).send(error);
-  }
-});
+    console.log(error);
 
-router.patch("/unblock/:id", verifyToken, verifyRole("admin"), async (req, res) => {
-  try {
-    const id = req.params.id;
-
-    const result = await usersCollection.updateOne(
-      {
-        _id: new ObjectId(id),
-      },
-      {
-        $set: {
-          isBlocked: false,
-        },
-      },
-    );
-
-    res.send(result);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
-router.patch("/role/:id", verifyToken, verifyRole("admin"), async (req, res) => {
-  try {
-    const id = req.params.id;
-
-    const { role } = req.body;
-
-    const result = await usersCollection.updateOne(
-      {
-        _id: new ObjectId(id),
-      },
-      {
-        $set: {
-          role,
-        },
-      },
-    );
-
-    res.send(result);
-  } catch (error) {
-    res.status(500).send(error);
+    res.status(500).send({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
 export default router;
-

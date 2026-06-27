@@ -4,10 +4,12 @@ import { db } from "../config/db.js";
 const usersCollection = db.collection("users");
 
 const verifyToken = async (req, res, next) => {
+  console.log(`[verifyToken] Incoming Request: ${req.method} ${req.originalUrl}`);
   const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
   console.log("Cookies:", req.cookies);
   console.log("Token:", token);
   if (!token) {
+    console.log("[verifyToken] No token found");
     return res.status(401).send({
       message: "Unauthorized Access",
     });
