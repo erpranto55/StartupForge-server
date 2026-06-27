@@ -118,7 +118,7 @@ router.patch("/:id", async (req, res) => {
       });
     }
 
-    await applicationsCollection.updateOne(
+    const result = await applicationsCollection.updateOne(
       {
         _id: application._id,
       },

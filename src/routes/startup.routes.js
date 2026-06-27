@@ -122,6 +122,36 @@ router.patch("/approve/:id", async (req, res) => {
   }
 });
 
+/**
+ * Get Startup Team
+ */
+router.get("/team/:email", async (req, res) => {
+  try {
+    const startup = await startupsCollection.findOne({
+      founder_email: req.params.email,
+    });
+
+    if (!startup) {
+      return res.status(404).json({
+        success: false,
+        message: "Startup not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: startup.team_members || [],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
 // Get Single Startup
 router.get("/:id", async (req, res) => {
   try {
