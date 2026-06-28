@@ -49,14 +49,41 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
 });
 
 /* ======================================================
-   Admin - Get All Startups
+Get Startups
 ====================================================== */
 
-router.get("/", verifyToken, verifyRole("admin"), async (req, res) => {
+router.get("/", async (req, res) => {
+  try {
+    const startups = await startupsCollection
+      .find({
+        status: "approved",
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .toArray();
+
+    res.json({
+      success: true,
+      data: startups,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+router.get("/admin/all", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const startups = await startupsCollection
       .find()
-      .sort({ createdAt: -1 })
+      .sort({
+        createdAt: -1,
+      })
       .toArray();
 
     res.json({
@@ -213,10 +240,13 @@ router.get(
    Get Single Startup
 ====================================================== */
 
-router.get("/:id", verifyToken, async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
+    const { id } = req.params;
+
     const startup = await startupsCollection.findOne({
-      _id: new ObjectId(req.params.id),
+      _id: new ObjectId(id),
+      status: "approved",
     });
 
     if (!startup) {
@@ -226,9 +256,23 @@ router.get("/:id", verifyToken, async (req, res) => {
       });
     }
 
+    const opportunitiesCollection = db.collection("opportunities");
+
+    const opportunities = await opportunitiesCollection
+      .find({
+        founder_email: startup.founder_email,
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .toArray();
+
     res.json({
       success: true,
-      data: startup,
+      data: {
+        startup,
+        opportunities,
+      },
     });
   } catch (error) {
     console.error(error);
