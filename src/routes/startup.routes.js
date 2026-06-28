@@ -8,12 +8,14 @@ const router = express.Router();
 
 const startupsCollection = db.collection("startups");
 
-// Create Startup
+/* ======================================================
+   Create Startup
+====================================================== */
+
 router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const startup = req.body;
 
-    // Check existing startup
     const existingStartup = await startupsCollection.findOne({
       founder_email: startup.founder_email,
     });
@@ -45,8 +47,12 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
     });
   }
 });
-// Get All Startups
-router.get("/", async (req, res) => {
+
+/* ======================================================
+   Admin - Get All Startups
+====================================================== */
+
+router.get("/", verifyToken, verifyRole("admin"), async (req, res) => {
   try {
     const startups = await startupsCollection
       .find()
@@ -67,100 +73,150 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get Startups By Founder Email
-router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const { email } = req.params;
+/* ======================================================
+   Founder - My Startup
+====================================================== */
 
-    const startups = await startupsCollection
-      .find({
-        founder_email: email,
-      })
-      .sort({ createdAt: -1 })
-      .toArray();
+router.get(
+  "/founder/:email",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      const { email } = req.params;
 
-    res.json({
-      success: true,
-      data: startups,
-    });
-  } catch (error) {
-    console.error(error);
+      if (req.user.email !== email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden",
+        });
+      }
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      const startups = await startupsCollection
+        .find({
+          founder_email: email,
+        })
+        .sort({
+          createdAt: -1,
+        })
+        .toArray();
 
-// Approve Startup
-router.patch("/approve/:id", verifyToken, verifyRole("admin"), async (req, res) => {
-  try {
-    const { id } = req.params;
+      res.json({
+        success: true,
+        data: startups,
+      });
+    } catch (error) {
+      console.error(error);
 
-    const result = await startupsCollection.updateOne(
-      {
-        _id: new ObjectId(id),
-      },
-      {
-        $set: {
-          status: "approved",
-        },
-      },
-    );
-
-    res.json({
-      success: true,
-      message: "Startup approved successfully",
-      modifiedCount: result.modifiedCount,
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-/**
- * Get Startup Team
- */
-router.get("/team/:email", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const startup = await startupsCollection.findOne({
-      founder_email: req.params.email,
-    });
-
-    if (!startup) {
-      return res.status(404).json({
+      res.status(500).json({
         success: false,
-        message: "Startup not found",
+        message: error.message,
       });
     }
+  },
+);
 
-    res.json({
-      success: true,
-      data: startup.team_members || [],
-    });
-  } catch (error) {
-    console.error(error);
+/* ======================================================
+   Approve Startup
+====================================================== */
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+router.patch(
+  "/approve/:id",
+  verifyToken,
+  verifyRole("admin"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-// Get Single Startup
-router.get("/:id", async (req, res) => {
+      const startup = await startupsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+
+      if (!startup) {
+        return res.status(404).json({
+          success: false,
+          message: "Startup not found",
+        });
+      }
+
+      const result = await startupsCollection.updateOne(
+        {
+          _id: new ObjectId(id),
+        },
+        {
+          $set: {
+            status: "approved",
+          },
+        },
+      );
+
+      res.json({
+        success: true,
+        message: "Startup approved successfully",
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+/* ======================================================
+   Startup Team
+====================================================== */
+
+router.get(
+  "/team/:email",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      if (req.user.email !== req.params.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden",
+        });
+      }
+
+      const startup = await startupsCollection.findOne({
+        founder_email: req.params.email,
+      });
+
+      if (!startup) {
+        return res.status(404).json({
+          success: false,
+          message: "Startup not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        data: startup.team_members || [],
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+/* ======================================================
+   Get Single Startup
+====================================================== */
+
+router.get("/:id", verifyToken, async (req, res) => {
   try {
-    const { id } = req.params;
-
     const startup = await startupsCollection.findOne({
-      _id: new ObjectId(id),
+      _id: new ObjectId(req.params.id),
     });
 
     if (!startup) {
@@ -184,78 +240,93 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Update Startup
-router.patch("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
-  try {
-    const { id } = req.params;
+/* ======================================================
+   Update Startup
+====================================================== */
 
-    const updatedData = { ...req.body };
+router.patch(
+  "/:id",
+  verifyToken,
+  verifyRole("founder", "admin"),
+  async (req, res) => {
+    try {
+      const updatedData = { ...req.body };
 
-    delete updatedData._id;
-    delete updatedData.createdAt;
-    delete updatedData.founder_email;
+      delete updatedData._id;
+      delete updatedData.createdAt;
+      delete updatedData.founder_email;
 
-    const result = await startupsCollection.updateOne(
-      {
-        _id: new ObjectId(id),
-      },
-      {
-        $set: updatedData,
-      },
-    );
+      const result = await startupsCollection.updateOne(
+        {
+          _id: new ObjectId(req.params.id),
+        },
+        {
+          $set: updatedData,
+        },
+      );
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({
+      if (!result.matchedCount) {
+        return res.status(404).json({
+          success: false,
+          message: "Startup not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Startup updated successfully",
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
         success: false,
-        message: "Startup not found",
+        message: error.message,
       });
     }
+  },
+);
 
-    res.json({
-      success: true,
-      message: "Startup updated successfully",
-      modifiedCount: result.modifiedCount,
-    });
-  } catch (error) {
-    console.error(error);
+/* ======================================================
+   Delete Startup
+====================================================== */
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+router.delete(
+  "/:id",
+  verifyToken,
+  verifyRole("founder", "admin"),
+  async (req, res) => {
+    try {
+      const startup = await startupsCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
 
-// Delete Startup
-router.delete("/:id", verifyToken, verifyRole("founder", "admin"), async (req, res) => {
-  try {
-    const { id } = req.params;
+      if (!startup) {
+        return res.status(404).json({
+          success: false,
+          message: "Startup not found",
+        });
+      }
 
-    const result = await startupsCollection.deleteOne({
-      _id: new ObjectId(id),
-    });
+      const result = await startupsCollection.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({
+      res.json({
+        success: true,
+        message: "Startup deleted successfully",
+        deletedCount: result.deletedCount,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
         success: false,
-        message: "Startup not found",
+        message: error.message,
       });
     }
-
-    res.json({
-      success: true,
-      message: "Startup deleted successfully",
-      deletedCount: result.deletedCount,
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+  },
+);
 
 export default router;
-
