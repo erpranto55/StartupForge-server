@@ -209,6 +209,7 @@ Stores premium subscription invoice logs.
 | Method | Endpoint | Description | Auth Required | Role Allowed | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | GET | `/api/dashboard/admin` | Retrieve system-wide stats | Yes | `admin` | Combines users, startups, and payment numbers |
+| GET | `/api/public-stats` | Retrieve public count statistics | No | Public | Returns totals for active startups, opportunities, and collaborators |
 
 ## Validation
 

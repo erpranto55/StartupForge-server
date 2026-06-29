@@ -7,7 +7,7 @@ import { auth } from "./config/auth.js";
 
 dotenv.config();
 
-import { connectDB } from "./config/db.js";
+import { connectDB, db } from "./config/db.js";
 
 import userRoutes from "./routes/user.routes.js";
 import startupRoutes from "./routes/startup.routes.js";
@@ -47,6 +47,27 @@ app.get("/private", verifyToken, (req, res) => {
     message: "Private Route Access Granted",
     user: req.user,
   });
+});
+
+app.get("/api/public-stats", async (req, res) => {
+  try {
+    const [startups, opportunities, collaborators] = await Promise.all([
+      db.collection("startups").countDocuments({ status: "approved" }),
+      db.collection("opportunities").countDocuments(),
+      db.collection("users").countDocuments({ role: "collaborator" }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        startups,
+        opportunities,
+        collaborators,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 app.get("/", (req, res) => {
