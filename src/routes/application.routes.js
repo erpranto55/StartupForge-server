@@ -11,11 +11,22 @@ const startupsCollection = db.collection("startups");
 
 router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
   try {
-    const application = req.body;
+    const {
+      opportunity_id,
+      founder_email,
+      startup_name,
+      role_title,
+      portfolio,
+    } = req.body;
 
+    const applicant_email = req.user.email;
+    const applicant_name = req.user.name || req.user.username || "";
+    const applicant_photo = req.user.image || "";
+
+    // Prevent duplicate application
     const existing = await applicationsCollection.findOne({
-      opportunity_id: application.opportunity_id,
-      applicant_email: application.applicant_email,
+      opportunity_id,
+      applicant_email,
     });
 
     if (existing) {
@@ -25,11 +36,23 @@ router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
       });
     }
 
-    const result = await applicationsCollection.insertOne({
-      ...application,
+    const application = {
+      opportunity_id,
+      founder_email,
+      startup_name,
+      role_title,
+
+      applicant_email,
+      applicant_name,
+      applicant_photo,
+
+      portfolio: portfolio || "",
+
       status: "Pending",
       applied_at: new Date(),
-    });
+    };
+
+    const result = await applicationsCollection.insertOne(application);
 
     res.status(201).json({
       success: true,
@@ -46,57 +69,67 @@ router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
   }
 });
 
-router.get("/user/:email", verifyToken, verifyRole("collaborator"), async (req, res) => {
-  try {
-    const applications = await applicationsCollection
-      .find({
-        applicant_email: req.params.email,
-      })
-      .sort({
-        applied_at: -1,
-      })
-      .toArray();
+router.get(
+  "/user/:email",
+  verifyToken,
+  verifyRole("collaborator"),
+  async (req, res) => {
+    try {
+      const applications = await applicationsCollection
+        .find({
+          applicant_email: req.user.email,
+        })
+        .sort({
+          applied_at: -1,
+        })
+        .toArray();
 
-    res.json({
-      success: true,
-      data: applications,
-    });
-  } catch (error) {
-    console.error(error);
+      res.json({
+        success: true,
+        data: applications,
+      });
+    } catch (error) {
+      console.error(error);
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 //Control Accept or Delete
 
-router.get("/founder/:email", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const applications = await applicationsCollection
-      .find({
-        founder_email: req.params.email,
-      })
-      .sort({
-        applied_at: -1,
-      })
-      .toArray();
+router.get(
+  "/founder/:email",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      const applications = await applicationsCollection
+        .find({
+          founder_email: req.user.email,
+        })
+        .sort({
+          applied_at: -1,
+        })
+        .toArray();
 
-    res.json({
-      success: true,
-      data: applications,
-    });
-  } catch (error) {
-    console.error(error);
+      res.json({
+        success: true,
+        data: applications,
+      });
+    } catch (error) {
+      console.error(error);
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
@@ -179,57 +212,67 @@ router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
 /**
  * Get Application By Opportunity & Applicant
  */
-router.get("/check", verifyToken, verifyRole("collaborator"), async (req, res) => {
-  try {
-    const { opportunity_id, applicant_email } = req.query;
+router.get(
+  "/check",
+  verifyToken,
+  verifyRole("collaborator"),
+  async (req, res) => {
+    try {
+      const { opportunity_id } = req.query;
 
-    const application = await applicationsCollection.findOne({
-      opportunity_id,
-      applicant_email,
-    });
+      const applicant_email = req.user.email;
 
-    res.json({
-      success: true,
-      applied: !!application,
-      data: application,
-    });
-  } catch (error) {
-    console.error(error);
+      const application = await applicationsCollection.findOne({
+        opportunity_id,
+        applicant_email,
+      });
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.json({
+        success: true,
+        applied: !!application,
+      });
+    } catch (error) {
+      console.error(error);
 
-router.delete("/:id", verifyToken, verifyRole("founder", "collaborator", "admin"), async (req, res) => {
-  try {
-    const result = await applicationsCollection.deleteOne({
-      _id: new ObjectId(req.params.id),
-    });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({
+      res.status(500).json({
         success: false,
-        message: "Application not found",
+        message: error.message,
       });
     }
+  },
+);
 
-    res.json({
-      success: true,
-      message: "Application deleted successfully",
-      deletedCount: result.deletedCount,
-    });
-  } catch (error) {
-    console.error(error);
+router.delete(
+  "/:id",
+  verifyToken,
+  verifyRole("founder", "collaborator", "admin"),
+  async (req, res) => {
+    try {
+      const result = await applicationsCollection.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Application not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Application deleted successfully",
+        deletedCount: result.deletedCount,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 export default router;
-
