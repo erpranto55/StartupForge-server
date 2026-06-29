@@ -14,53 +14,58 @@ const usersCollection = db.collection("users");
 /**
  * Create Stripe Checkout Session
  */
-router.post("/create-checkout-session", verifyToken, verifyRole("founder"), async (req, res) => {
-  try {
-    const { email } = req.body;
+router.post(
+  "/create-checkout-session",
+  verifyToken,
+  verifyRole("founder"),
+  async (req, res) => {
+    try {
+      const { email } = req.body;
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
 
-      mode: "payment",
+        mode: "payment",
 
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
 
-            product_data: {
-              name: "StartupForge Premium Founder",
+              product_data: {
+                name: "StartupForge Premium Founder",
+              },
+
+              unit_amount: 2900, // $29.00
             },
 
-            unit_amount: 2900, // $29.00
+            quantity: 1,
           },
+        ],
 
-          quantity: 1,
+        success_url: `http://localhost:3000/payment-success?email=${email}`,
+
+        cancel_url: "http://localhost:3000/dashboard",
+
+        metadata: {
+          email,
         },
-      ],
+      });
 
-      success_url: `http://localhost:3000/payment-success?email=${email}`,
+      res.send({
+        success: true,
+        url: session.url,
+      });
+    } catch (error) {
+      console.log(error);
 
-      cancel_url: "http://localhost:3000/dashboard",
-
-      metadata: {
-        email,
-      },
-    });
-
-    res.send({
-      success: true,
-      url: session.url,
-    });
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.status(500).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
 /**
  * Save Payment
@@ -69,21 +74,31 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const payment = req.body;
 
-    const result = await paymentsCollection.insertOne({
-      ...payment,
+    const existing = await paymentsCollection.findOne({
+      transaction_id: payment.transaction_id,
+    });
+
+    if (existing) {
+      return res.send({
+        success: true,
+        message: "Already saved",
+      });
+    }
+    await paymentsCollection.insertOne({
+      user_email: payment.user_email,
+      amount: payment.amount,
+      payment_status: "Paid",
+      transaction_id: payment.transaction_id,
       paid_at: new Date(),
     });
 
-    // Make User Premium
     await usersCollection.updateOne(
-      {
-        email: payment.user_email,
-      },
+      { email: payment.user_email },
       {
         $set: {
           isPremium: true,
         },
-      }
+      },
     );
 
     res.send({
