@@ -22,6 +22,13 @@ router.post(
     try {
       const { email } = req.body;
 
+      if (email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
 
@@ -73,6 +80,13 @@ router.post(
 router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const payment = req.body;
+
+    if (payment.user_email !== req.user.email) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden Access",
+      });
+    }
 
     const existing = await paymentsCollection.findOne({
       transaction_id: payment.transaction_id,

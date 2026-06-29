@@ -16,6 +16,13 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const startup = req.body;
 
+    if (startup.founder_email !== req.user.email) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden Access",
+      });
+    }
+
     const existingStartup = await startupsCollection.findOne({
       founder_email: startup.founder_email,
     });
@@ -294,6 +301,24 @@ router.patch(
   verifyRole("founder", "admin"),
   async (req, res) => {
     try {
+      const startup = await startupsCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+
+      if (!startup) {
+        return res.status(404).json({
+          success: false,
+          message: "Startup not found",
+        });
+      }
+
+      if (req.user.role === "founder" && startup.founder_email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
       const updatedData = { ...req.body };
 
       delete updatedData._id;
@@ -302,7 +327,7 @@ router.patch(
 
       const result = await startupsCollection.updateOne(
         {
-          _id: new ObjectId(req.params.id),
+          _id: startup._id,
         },
         {
           $set: updatedData,
@@ -353,8 +378,15 @@ router.delete(
         });
       }
 
+      if (req.user.role === "founder" && startup.founder_email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
       const result = await startupsCollection.deleteOne({
-        _id: new ObjectId(req.params.id),
+        _id: startup._id,
       });
 
       res.json({

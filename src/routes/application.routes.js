@@ -17,6 +17,7 @@ router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
       startup_name,
       role_title,
       portfolio,
+      motivation,
     } = req.body;
 
     const applicant_email = req.user.email;
@@ -47,6 +48,7 @@ router.post("/", verifyToken, verifyRole("collaborator"), async (req, res) => {
       applicant_photo,
 
       portfolio: portfolio || "",
+      motivation: motivation || "",
 
       status: "Pending",
       applied_at: new Date(),
@@ -143,6 +145,13 @@ router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Application not found",
+      });
+    }
+
+    if (application.founder_email !== req.user.email) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden Access",
       });
     }
 
@@ -248,8 +257,33 @@ router.delete(
   verifyRole("founder", "collaborator", "admin"),
   async (req, res) => {
     try {
-      const result = await applicationsCollection.deleteOne({
+      const application = await applicationsCollection.findOne({
         _id: new ObjectId(req.params.id),
+      });
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: "Application not found",
+        });
+      }
+
+      if (req.user.role === "collaborator" && application.applicant_email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
+      if (req.user.role === "founder" && application.founder_email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
+      const result = await applicationsCollection.deleteOne({
+        _id: application._id,
       });
 
       if (result.deletedCount === 0) {

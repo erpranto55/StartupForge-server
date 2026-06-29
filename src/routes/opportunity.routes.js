@@ -16,6 +16,13 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
     const opportunity = req.body;
 
+    if (opportunity.founder_email !== req.user.email) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden Access",
+      });
+    }
+
     // Check Founder
     const founder = await usersCollection.findOne({
       email: opportunity.founder_email,
@@ -71,6 +78,13 @@ router.get(
   verifyRole("founder"),
   async (req, res) => {
     try {
+      if (req.user.email !== req.params.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
       const opportunities = await opportunitiesCollection
         .find({
           founder_email: req.params.email,
@@ -240,6 +254,24 @@ router.get("/:id", async (req, res) => {
  */
 router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
   try {
+    const opportunity = await opportunitiesCollection.findOne({
+      _id: new ObjectId(req.params.id),
+    });
+
+    if (!opportunity) {
+      return res.status(404).json({
+        success: false,
+        message: "Opportunity not found",
+      });
+    }
+
+    if (opportunity.founder_email !== req.user.email) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden Access",
+      });
+    }
+
     const updatedData = {
       ...req.body,
     };
@@ -250,7 +282,7 @@ router.patch("/:id", verifyToken, verifyRole("founder"), async (req, res) => {
 
     const result = await opportunitiesCollection.updateOne(
       {
-        _id: new ObjectId(req.params.id),
+        _id: opportunity._id,
       },
       {
         $set: updatedData,
@@ -288,8 +320,26 @@ router.delete(
   verifyRole("founder", "admin"),
   async (req, res) => {
     try {
-      const result = await opportunitiesCollection.deleteOne({
+      const opportunity = await opportunitiesCollection.findOne({
         _id: new ObjectId(req.params.id),
+      });
+
+      if (!opportunity) {
+        return res.status(404).json({
+          success: false,
+          message: "Opportunity not found",
+        });
+      }
+
+      if (req.user.role === "founder" && opportunity.founder_email !== req.user.email) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden Access",
+        });
+      }
+
+      const result = await opportunitiesCollection.deleteOne({
+        _id: opportunity._id,
       });
 
       if (result.deletedCount === 0) {

@@ -36,6 +36,8 @@ const verifyToken = async (req, res, next) => {
       role: user.role,
       isBlocked: user.isBlocked,
       userId: user._id?.toString(),
+      name: user.name,
+      image: user.image,
     };
 
     next();
