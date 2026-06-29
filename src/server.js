@@ -15,6 +15,7 @@ import opportunityRoutes from "./routes/opportunity.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 import verifyToken from "./middlewares/verifyToken.js";
 
@@ -38,6 +39,7 @@ app.use("/api/opportunities", opportunityRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/custom-auth", authRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/private", verifyToken, (req, res) => {
   res.send({
