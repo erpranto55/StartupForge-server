@@ -43,9 +43,9 @@ router.post(
           },
         ],
 
-        success_url: `http://localhost:3000/payment-success?email=${email}`,
+        success_url: `${process.env.NEXT_PUBLIC_CLIENT_URL}/payment-success?email=${email}`,
 
-        cancel_url: "http://localhost:3000/dashboard",
+        cancel_url: `${process.env.NEXT_PUBLIC_CLIENT_URL}/dashboard`,
 
         metadata: {
           email,
