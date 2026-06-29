@@ -43,9 +43,9 @@ router.post(
           },
         ],
 
-        success_url: `${process.env.NEXT_PUBLIC_CLIENT_URL}/payment-success?email=${email}`,
+        success_url: `${process.env.NEXT_PUBLIC_CLIENT_URL?.replace(/\/$/, "")}/payment-success?email=${email}`,
 
-        cancel_url: `${process.env.NEXT_PUBLIC_CLIENT_URL}/dashboard`,
+        cancel_url: `${process.env.NEXT_PUBLIC_CLIENT_URL?.replace(/\/$/, "")}/dashboard`,
 
         metadata: {
           email,
@@ -84,7 +84,7 @@ router.post("/", verifyToken, verifyRole("founder"), async (req, res) => {
         message: "Already saved",
       });
     }
-    await paymentsCollection.insertOne({
+    const result = await paymentsCollection.insertOne({
       user_email: payment.user_email,
       amount: payment.amount,
       payment_status: "Paid",

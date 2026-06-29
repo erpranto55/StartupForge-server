@@ -21,9 +21,27 @@ import verifyToken from "./middlewares/verifyToken.js";
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_CLIENT_URL?.replace(/\/$/, ""),
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:5173",
+  "http://localhost:5174"
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [process.env.NEXT_PUBLIC_CLIENT_URL],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+          return callback(null, true);
+        }
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   }),
 );
